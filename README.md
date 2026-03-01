@@ -5,6 +5,7 @@ Stmermaid is a powerful, AI-driven Mermaid.js diagram editor built with Streamli
 ## Features
 
 - **AI-Powered Generation**: Simply describe the diagram you want, and the Gemini AI will generate the Mermaid code for you.
+- **Image-to-Diagram Conversion**: Paste an image of a diagram from your clipboard, and the AI will analyze it to generate the corresponding Mermaid.js code.
 - **Iterative Refinement**: Chat with the AI assistant to modify existing diagrams (e.g., "Add a new node", "Change the layout", "Make it more complex").
 - **Live Preview**: Real-time rendering of Mermaid diagrams.
 - **Configuration Sidebar**:
@@ -50,3 +51,4 @@ streamlit run app.py
 - [Mermaid.js](https://mermaid.js.org/)
 - [Google Gemini API](https://ai.google.dev/)
 - [python-dotenv](https://github.com/theskumar/python-dotenv)
+- [streamlit-paste-button](https://github.com/ohtaman/streamlit-paste-button)

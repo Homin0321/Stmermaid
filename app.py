@@ -6,17 +6,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 from google import genai
+from streamlit_paste_button import paste_image_button
 
 load_dotenv()
 st.set_page_config(layout="wide", page_title="Stmermaid")
 
 # --- 1. Constants & Default Data ---
 MODEL_OPTIONS = [
-    "gemini-flash-lite-latest",
     "gemini-3-flash-preview",
     "gemini-3.1-pro-preview",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
 ]
 
 DEFAULT_DIAGRAM = """flowchart LR
@@ -126,8 +124,99 @@ st.sidebar.selectbox(
     "Select Model", options=MODEL_OPTIONS, index=0, key="selected_model"
 )
 
-# New Chat Button - uses the callback to avoid state loss
-st.sidebar.button("New Chat", width="stretch", on_click=clear_chat)
+# --- Image to Diagram Feature & Chat Controls ---
+with st.sidebar:
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        paste_result = paste_image_button(
+            label="Paste Image",
+            background_color="#C0C0C0",
+            hover_background_color="#666666",
+            errors="ignore",
+            key="paste_image_btn",
+        )
+    with btn_col2:
+        st.button("New Chat", use_container_width=True, on_click=clear_chat)
+
+if paste_result.image_data is not None:
+    st.sidebar.image(
+        paste_result.image_data,
+        caption="Pasted Diagram Image",
+        use_container_width=True,
+    )
+    if st.sidebar.button("Convert to Diagram", use_container_width=True):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            st.sidebar.error("Please set GEMINI_API_KEY in your .env file.")
+        else:
+            with st.sidebar.status("AI is analyzing the image..."):
+                try:
+                    client = genai.Client(api_key=api_key)
+                    system_prompt = (
+                        "You are a Mermaid.js expert. Your task is to extract the diagram from the provided image and generate the corresponding Mermaid diagram code.\n"
+                        "Instructions:\n"
+                        "1. Analyze the structure, nodes, connections, text, and overall flow in the diagram image.\n"
+                        "2. Provide the complete, accurate Mermaid code inside a markdown code block starting with ```mermaid.\n"
+                        "3. Ensure the code is valid syntax.\n"
+                        "4. Do not include extra explanation outside the code block unless necessary."
+                    )
+
+                    contents = [
+                        "Please carefully convert this diagram image into Mermaid.js code.",
+                        paste_result.image_data,
+                    ]
+
+                    response = client.models.generate_content(
+                        model=st.session_state.selected_model,
+                        contents=contents,
+                        config={"system_instruction": system_prompt},
+                    )
+
+                    full_response = response.text
+                    mermaid_pattern = re.compile(r"```mermaid\n(.*?)\n```", re.DOTALL)
+                    match = mermaid_pattern.search(full_response)
+
+                    if match:
+                        generated_code = match.group(1).strip()
+                        chat_display_text = mermaid_pattern.sub(
+                            "", full_response
+                        ).strip()
+
+                        # Preserve current style configurations via frontmatter
+                        new_frontmatter = "---\nconfig:\n"
+                        new_frontmatter += f"  theme: {st.session_state.config_theme}\n"
+                        new_frontmatter += f"  look: {st.session_state.config_look}\n"
+                        new_frontmatter += (
+                            f"  layout: {st.session_state.config_layout}\n"
+                        )
+                        new_frontmatter += "  flowchart:\n"
+                        new_frontmatter += (
+                            f"    curve: {st.session_state.config_curve}\n"
+                        )
+                        new_frontmatter += "---\n"
+
+                        st.session_state.mermaid_code = new_frontmatter + generated_code
+                    else:
+                        chat_display_text = full_response
+
+                    st.session_state.messages.append(
+                        {
+                            "role": "user",
+                            "content": "🖼️ Uploaded an image for diagram conversion.",
+                        }
+                    )
+                    st.session_state.messages.append(
+                        {
+                            "role": "assistant",
+                            "content": "I have extracted the diagram from the image.\n\n"
+                            + chat_display_text,
+                        }
+                    )
+                    st.rerun()
+
+                except Exception as e:
+                    st.sidebar.error(f"Error calling Gemini API: {e}")
+
 
 # Chat History
 st.sidebar.subheader("AI Assistant")
@@ -233,14 +322,14 @@ with col2:
         }}
         #download-btn {{
             padding: 6px 12px;
-            background-color: #4CAF50;
+            background-color: #C0C0C0;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
             display: none;
-            opacity: 0.8;
+            opacity: 0.6;
             transition: opacity 0.2s;
         }}
         #download-btn:hover {{
