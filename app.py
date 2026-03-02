@@ -17,19 +17,10 @@ MODEL_OPTIONS = [
     "gemini-3.1-pro-preview",
 ]
 
-DEFAULT_DIAGRAM = """flowchart LR
-    A[Hard edge] -->|Link text| B(Round edge)
-    B --> C{Decision}
-    C -->|One| D[Result one]
-    C -->|Two| E[Result two]
-"""
-
-INITIAL_FRONTMATTER = "---\nconfig:\n  theme: default\n  look: classic\n  layout: dagre\n  flowchart:\n    curve: basis\n---\n"
-
 # --- 2. Session State Initialization ---
 # We initialize these only once to prevent resets during reruns
 if "mermaid_code" not in st.session_state:
-    st.session_state.mermaid_code = f"{INITIAL_FRONTMATTER}{DEFAULT_DIAGRAM}"
+    st.session_state.mermaid_code = ""
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -50,7 +41,7 @@ if "config_curve" not in st.session_state:
 # --- 3. Helper Functions ---
 def update_code_from_sidebar():
     """Update the mermaid code based on sidebar inputs, preserving the diagram body."""
-    current_code = st.session_state.mermaid_code
+    current_code = st.session_state.mermaid_code or ""
     frontmatter_pattern = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
     match = frontmatter_pattern.match(current_code)
 
@@ -136,15 +127,16 @@ with st.sidebar:
             key="paste_image_btn",
         )
     with btn_col2:
-        st.button("New Chat", use_container_width=True, on_click=clear_chat)
+        st.button("New Chat", width="stretch", on_click=clear_chat)
 
 if paste_result.image_data is not None:
     st.sidebar.image(
         paste_result.image_data,
         caption="Pasted Diagram Image",
-        use_container_width=True,
+        width="stretch",
     )
-    if st.sidebar.button("Convert to Diagram", use_container_width=True):
+
+    if st.sidebar.button("Convert to Diagram", width="stretch"):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             st.sidebar.error("Please set GEMINI_API_KEY in your .env file.")
@@ -294,7 +286,7 @@ with col1:
     )
 
 with col2:
-    final_code = st.session_state.mermaid_code
+    final_code = st.session_state.mermaid_code or ""
 
     html_code = f"""
     <!DOCTYPE html>
