@@ -281,7 +281,7 @@ with col1:
     st.text_area(
         "Mermaid Code Input",
         key="mermaid_code",
-        height=800,
+        height=1000,
         label_visibility="collapsed",
     )
 
@@ -396,4 +396,4 @@ with col2:
     </html>
     """
 
-    components.html(html_code, height=800, scrolling=True)
+    components.html(html_code, height=1000, scrolling=True)
